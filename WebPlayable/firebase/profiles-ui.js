@@ -3,6 +3,7 @@ import {
   initFirebase,
   watchAuth,
   signInGuest,
+  signInWithGoogle,
   registerEmail,
   loginEmail,
   logoutFirebase,
@@ -18,6 +19,8 @@ export function mountProfileUI({ root, onProfile }) {
       <p class="profile-title">Player profile</p>
       <p class="profile-sub" id="firebase-status">Connecting…</p>
       <div class="profile-actions">
+        <button type="button" class="btn btn-google" id="btn-google">Sign in with Google</button>
+        <p class="profile-note">Android APK uses <strong>Google Play Games</strong> sign-in. Web uses Google.</p>
         <button type="button" class="btn btn-small" id="btn-guest">Continue as Guest</button>
       </div>
       <div class="auth-form">
@@ -66,8 +69,16 @@ export function mountProfileUI({ root, onProfile }) {
     signedOut.classList.add("hidden");
     signedIn.classList.remove("hidden");
     panel.querySelector("#profile-name").textContent = profile?.displayName || user.displayName || "Player";
+    const provider =
+      user.providerData?.some((p) => p.providerId === "google.com")
+        ? "Google"
+        : user.providerData?.some((p) => p.providerId === "playgames.google.com")
+          ? "Play Games"
+          : user.isAnonymous
+            ? "Guest"
+            : user.email || "Account";
     panel.querySelector("#profile-meta").textContent = profile
-      ? `@${profile.username} · ${user.isAnonymous ? "Guest" : user.email || "Account"}`
+      ? `@${profile.username} · ${provider}`
       : user.uid;
     const s = profile?.stats || {};
     panel.querySelector("#profile-stats").textContent =
@@ -85,6 +96,15 @@ export function mountProfileUI({ root, onProfile }) {
 
   initFirebase();
   status.textContent = "Sign in to save your profile and play online.";
+
+  panel.querySelector("#btn-google").addEventListener("click", async () => {
+    try {
+      setError("");
+      await signInWithGoogle();
+    } catch (e) {
+      setError(e.code === "auth/popup-closed-by-user" ? "Google sign-in cancelled." : (e.message || String(e)));
+    }
+  });
 
   panel.querySelector("#btn-guest").addEventListener("click", async () => {
     try {

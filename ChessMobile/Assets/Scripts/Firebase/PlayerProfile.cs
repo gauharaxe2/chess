@@ -20,6 +20,7 @@ namespace ChessMobile.Firebase
         public string username;
         public string email;
         public string photoURL;
+        public string provider;
         public ProfileStats stats = new ProfileStats();
     }
 }
