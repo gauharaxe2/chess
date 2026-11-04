@@ -186,6 +186,8 @@ function renderBoard() {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "sq " + ((logicalFile + logicalRank) % 2 === 1 ? "light" : "dark");
+      btn.dataset.square = String.fromCharCode(97 + logicalFile) + (logicalRank + 1);
+      btn.setAttribute("aria-label", btn.dataset.square);
       if (state.selected === logical) btn.classList.add("selected");
       if (legalTos.has(logical)) {
         btn.classList.add("legal");
@@ -198,7 +200,10 @@ function renderBoard() {
         span.textContent = pieceGlyph(piece.type, piece.color);
         btn.appendChild(span);
       }
-      btn.addEventListener("click", () => onSquareClick(logical));
+      btn.addEventListener("pointerup", (ev) => {
+        ev.preventDefault();
+        onSquareClick(logical);
+      });
       boardEl.appendChild(btn);
     }
   }
