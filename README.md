@@ -11,7 +11,7 @@ cd WebPlayable && python3 -m http.server 8765
 # then open http://127.0.0.1:8765/
 ```
 
-**Firebase** (`chess-duel-426622`): Auth (guest + email), Firestore profiles/matches, Android `google-services.json`. See [`docs/FIREBASE.md`](docs/FIREBASE.md).
+**Firebase** (`chess-duel-426622`): Auth (Google / Play Games / guest / email), Firestore profiles/matches, Android `google-services.json`. See [`docs/FIREBASE.md`](docs/FIREBASE.md) and [`docs/GOOGLE_PLAY_GAMES.md`](docs/GOOGLE_PLAY_GAMES.md).
 
 ## Quick start
 
