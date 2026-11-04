@@ -11,6 +11,7 @@ namespace ChessMobile.UI
         private GameObject _root;
         private Text _status;
         private Text _turn;
+        private Text _score;
         private ChessBoardView _boardView;
 
         public void Build(Transform canvas)
@@ -23,9 +24,13 @@ namespace ChessMobile.UI
             UiFactory.CreatePanel(_root.transform, "Backdrop", GameTheme.BgDeep);
 
             _turn = UiFactory.CreateText(_root.transform, "Turn", "White to move", 34, GameTheme.TextPrimary);
-            UiFactory.Anchor(_turn.rectTransform, new Vector2(0.06f, 0.90f), new Vector2(0.70f, 0.97f), Vector2.zero, Vector2.zero);
+            UiFactory.Anchor(_turn.rectTransform, new Vector2(0.06f, 0.88f), new Vector2(0.70f, 0.95f), Vector2.zero, Vector2.zero);
             _turn.alignment = TextAnchor.MiddleLeft;
             _turn.fontStyle = FontStyle.Bold;
+
+            _score = UiFactory.CreateText(_root.transform, "Score", "Match 0–0 (first to 2 checkmates)", 24, GameTheme.Accent);
+            UiFactory.Anchor(_score.rectTransform, new Vector2(0.06f, 0.82f), new Vector2(0.70f, 0.88f), Vector2.zero, Vector2.zero);
+            _score.alignment = TextAnchor.MiddleLeft;
 
             var menuBtn = UiFactory.CreateButton(_root.transform, "MenuBtn", "Menu", GameTheme.AccentDark, () =>
             {
@@ -33,7 +38,7 @@ namespace ChessMobile.UI
                 FindFirstObjectByType<MainMenuController>()?.Show();
             });
             UiFactory.Anchor(menuBtn.GetComponent<RectTransform>(),
-                new Vector2(0.72f, 0.90f), new Vector2(0.96f, 0.97f), Vector2.zero, Vector2.zero);
+                new Vector2(0.72f, 0.88f), new Vector2(0.96f, 0.96f), Vector2.zero, Vector2.zero);
             menuBtn.GetComponentInChildren<Text>().fontSize = 28;
 
             var boardHost = new GameObject("BoardHost");
@@ -56,14 +61,14 @@ namespace ChessMobile.UI
             _status = UiFactory.CreateText(_root.transform, "Status", "Ready", 28, GameTheme.TextMuted);
             UiFactory.Anchor(_status.rectTransform, new Vector2(0.06f, 0.12f), new Vector2(0.94f, 0.20f), Vector2.zero, Vector2.zero);
 
-            var resetBtn = UiFactory.CreateButton(_root.transform, "ResetBtn", "New Game", GameTheme.AccentDark, () =>
+            var resetBtn = UiFactory.CreateButton(_root.transform, "ResetBtn", "Next Game", GameTheme.AccentDark, () =>
             {
                 var session = GameSession.Instance;
                 if (session == null) return;
-                if (session.Mode == GameMode.OfflineHotseat)
-                    session.StartOfflineHotseat();
+                if (session.Mode == GameMode.OfflineHotseat || session.Chess.Result != GameResult.None || session.Match.IsMatchOver)
+                    session.StartNextGame();
                 else
-                    _status.text = "Start a new online match from the menu.";
+                    _status.text = "Finish the current game first, or return to the menu.";
             });
             UiFactory.Anchor(resetBtn.GetComponent<RectTransform>(),
                 new Vector2(0.20f, 0.03f), new Vector2(0.80f, 0.10f), Vector2.zero, Vector2.zero);
@@ -97,7 +102,16 @@ namespace ChessMobile.UI
             var session = GameSession.Instance;
             if (session == null || _turn == null) return;
 
-            if (session.Chess.Result != GameResult.None)
+            if (_score != null)
+                _score.text = session.Match.ScoreLine();
+
+            if (session.Match.IsMatchOver)
+            {
+                string winner = session.Match.MatchWinner == GameResult.WhiteWins ? "White" : "Black";
+                _turn.text = $"Match over — {winner} wins (2 checkmates)";
+                _turn.color = GameTheme.Accent;
+            }
+            else if (session.Chess.Result != GameResult.None)
             {
                 _turn.text = GameSession.DescribeResult(session.Chess.Result, session.Chess.DrawReason);
                 _turn.color = GameTheme.Accent;

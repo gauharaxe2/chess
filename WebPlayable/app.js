@@ -16,6 +16,8 @@ import {
   tryUci,
 } from "./chess.js";
 
+const CHECKMATES_TO_WIN = 2;
+
 function findKing(board, color) {
   for (let i = 0; i < 64; i++) {
     const p = board[i];
@@ -28,6 +30,7 @@ const menu = document.getElementById("menu");
 const gameScreen = document.getElementById("game");
 const boardEl = document.getElementById("board");
 const turnLabel = document.getElementById("turn-label");
+const scoreLabel = document.getElementById("score-label");
 const statusLabel = document.getElementById("status-label");
 const menuHint = document.getElementById("menu-hint");
 const joinInput = document.getElementById("join-code");
@@ -35,7 +38,7 @@ const promoModal = document.getElementById("promo-modal");
 
 const state = {
   game: createGame(),
-  mode: "offline", // offline | online-host | online-join
+  mode: "offline",
   localColor: WHITE,
   selected: null,
   legal: [],
@@ -43,12 +46,43 @@ const state = {
   roomCode: null,
   channel: null,
   flip: false,
+  whiteCheckmates: 0,
+  blackCheckmates: 0,
+  matchWinner: null, // "white" | "black" | null
+  scoredCurrentGame: false,
 };
 
 resetGame(state.game);
 
+function scoreLine() {
+  return `Match ${state.whiteCheckmates}–${state.blackCheckmates} (first to ${CHECKMATES_TO_WIN} checkmates)`;
+}
+
+function resetMatchScores() {
+  state.whiteCheckmates = 0;
+  state.blackCheckmates = 0;
+  state.matchWinner = null;
+  state.scoredCurrentGame = false;
+}
+
+function applyCheckmateScore() {
+  if (state.scoredCurrentGame || state.matchWinner) return;
+  const result = state.game.result;
+  if (!result || result === "draw") {
+    state.scoredCurrentGame = true;
+    return;
+  }
+
+  state.scoredCurrentGame = true;
+  if (result === "white") state.whiteCheckmates += 1;
+  if (result === "black") state.blackCheckmates += 1;
+
+  if (state.whiteCheckmates >= CHECKMATES_TO_WIN) state.matchWinner = "white";
+  if (state.blackCheckmates >= CHECKMATES_TO_WIN) state.matchWinner = "black";
+}
+
 function canInteract() {
-  if (state.game.result) return false;
+  if (state.matchWinner || state.game.result) return false;
   if (state.mode === "offline") return true;
   return state.game.side === state.localColor;
 }
@@ -72,13 +106,27 @@ function setStatus(msg) {
 
 function refreshHud() {
   const g = state.game;
-  if (g.result === "white") turnLabel.textContent = "Checkmate — White wins";
-  else if (g.result === "black") turnLabel.textContent = "Checkmate — Black wins";
-  else if (g.result === "draw") turnLabel.textContent = `Draw — ${g.drawReason || "agreement"}`;
-  else if (isInCheck(g)) turnLabel.textContent = `${sideName(g.side)} in check`;
-  else turnLabel.textContent = `${sideName(g.side)} to move`;
+  scoreLabel.textContent = scoreLine();
 
-  turnLabel.style.color = isInCheck(g) && !g.result ? "var(--danger)" : "";
+  if (state.matchWinner) {
+    turnLabel.textContent = `Match over — ${sideName(state.matchWinner === "white" ? WHITE : BLACK)} wins (2 checkmates)`;
+    turnLabel.style.color = "var(--accent)";
+  } else if (g.result === "white") {
+    turnLabel.textContent = "Checkmate — White scores";
+    turnLabel.style.color = "var(--accent)";
+  } else if (g.result === "black") {
+    turnLabel.textContent = "Checkmate — Black scores";
+    turnLabel.style.color = "var(--accent)";
+  } else if (g.result === "draw") {
+    turnLabel.textContent = `Draw — ${g.drawReason || "agreement"} (no point)`;
+    turnLabel.style.color = "var(--accent)";
+  } else if (isInCheck(g)) {
+    turnLabel.textContent = `${sideName(g.side)} in check`;
+    turnLabel.style.color = "var(--danger)";
+  } else {
+    turnLabel.textContent = `${sideName(g.side)} to move`;
+    turnLabel.style.color = "";
+  }
 }
 
 function renderBoard() {
@@ -159,6 +207,19 @@ function clearSelection() {
   renderBoard();
 }
 
+function afterGameProgress() {
+  if (!state.game.result) return;
+  applyCheckmateScore();
+  refreshHud();
+  if (state.matchWinner) {
+    setStatus(`${scoreLine()}. Match over — ${state.matchWinner === "white" ? "White" : "Black"} wins!`);
+  } else if (state.game.result === "draw") {
+    setStatus(`${scoreLine()}. Draws don't count — tap Next Game.`);
+  } else {
+    setStatus(`${scoreLine()}. First to ${CHECKMATES_TO_WIN} checkmates wins. Tap Next Game.`);
+  }
+}
+
 function playLocalMove(move) {
   if (!tryMove(state.game, move)) return;
   clearSelection();
@@ -166,20 +227,49 @@ function playLocalMove(move) {
   if (state.mode !== "offline" && state.channel) {
     state.channel.postMessage({ type: "move", uci: moveToUci(move), room: state.roomCode });
   }
-  updateTurnStatus();
+  if (state.game.result) afterGameProgress();
+  else updateTurnStatus();
   renderBoard();
 }
 
 function updateTurnStatus() {
-  if (state.game.result) {
-    setStatus("Game over");
-    return;
-  }
+  if (state.game.result || state.matchWinner) return;
   if (state.mode === "offline") {
-    setStatus(`${sideName(state.game.side)} to move — pass the device`);
+    setStatus(`${scoreLine()} · ${sideName(state.game.side)} to move`);
     return;
   }
-  setStatus(state.game.side === state.localColor ? "Your turn" : "Opponent's turn");
+  setStatus(
+    `${scoreLine()} · ${state.game.side === state.localColor ? "Your turn" : "Opponent's turn"}`
+  );
+}
+
+function startNextGame() {
+  if (state.matchWinner) {
+    resetMatchScores();
+    resetGame(state.game);
+    state.scoredCurrentGame = false;
+    clearSelection();
+    setStatus("New match — first to 2 checkmates. White to move");
+    refreshHud();
+    renderBoard();
+    return;
+  }
+
+  if (!state.game.result) {
+    setStatus("Finish the current game first.");
+    return;
+  }
+
+  resetGame(state.game);
+  state.scoredCurrentGame = false;
+  clearSelection();
+  setStatus(`${scoreLine()}. White to move`);
+  refreshHud();
+  renderBoard();
+
+  if (state.mode !== "offline" && state.channel) {
+    state.channel.postMessage({ type: "next", room: state.roomCode });
+  }
 }
 
 function startOffline() {
@@ -187,9 +277,10 @@ function startOffline() {
   state.mode = "offline";
   state.localColor = WHITE;
   state.flip = false;
+  resetMatchScores();
   resetGame(state.game);
   clearSelection();
-  setStatus("Offline dual player — White to move");
+  setStatus("Offline dual player — first to 2 checkmates. White to move");
   showGame();
 }
 
@@ -211,17 +302,16 @@ function startHost() {
   state.localColor = WHITE;
   state.flip = false;
   state.roomCode = code;
+  resetMatchScores();
   resetGame(state.game);
   clearSelection();
 
   const channel = new BroadcastChannel("chess-duel-" + code);
   state.channel = channel;
   channel.onmessage = (ev) => handleOnlineMessage(ev.data);
-
-  // Publish room presence for joiners scanning localStorage
   localStorage.setItem("chess-duel-room-" + code, JSON.stringify({ host: true, t: Date.now() }));
 
-  setStatus(`Room code: ${code} — open another tab and Join`);
+  setStatus(`Room ${code} — first to 2 checkmates. Open another tab and Join`);
   menuHint.textContent = `Hosting ${code}`;
   showGame();
 }
@@ -238,6 +328,7 @@ function startJoin(code) {
   state.localColor = BLACK;
   state.flip = true;
   state.roomCode = code;
+  resetMatchScores();
   resetGame(state.game);
   clearSelection();
 
@@ -246,7 +337,7 @@ function startJoin(code) {
   channel.onmessage = (ev) => handleOnlineMessage(ev.data);
   channel.postMessage({ type: "hello", room: code });
 
-  setStatus("Joined — you are Black. Waiting for White…");
+  setStatus("Joined — first to 2 checkmates. Waiting for White…");
   showGame();
 }
 
@@ -261,13 +352,22 @@ function handleOnlineMessage(data) {
     setStatus("Connected. Opponent (White) to move.");
     return;
   }
+  if (data.type === "next") {
+    resetGame(state.game);
+    state.scoredCurrentGame = false;
+    clearSelection();
+    setStatus(`${scoreLine()}. White to move`);
+    refreshHud();
+    renderBoard();
+    return;
+  }
   if (data.type === "move" && data.uci) {
-    // Only apply opponent moves
-    if (canInteract()) return; // ignore if somehow our turn echo
+    if (canInteract()) return;
     if (tryUci(state.game, data.uci)) {
       clearSelection();
       refreshHud();
-      updateTurnStatus();
+      if (state.game.result) afterGameProgress();
+      else updateTurnStatus();
       renderBoard();
     }
   }
@@ -290,10 +390,7 @@ document.getElementById("btn-offline").addEventListener("click", startOffline);
 document.getElementById("btn-host").addEventListener("click", startHost);
 document.getElementById("btn-join").addEventListener("click", () => startJoin(joinInput.value));
 document.getElementById("btn-menu").addEventListener("click", showMenu);
-document.getElementById("btn-new").addEventListener("click", () => {
-  if (state.mode === "offline") startOffline();
-  else setStatus("Start a new online match from the menu.");
-});
+document.getElementById("btn-new").addEventListener("click", startNextGame);
 
 joinInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") startJoin(joinInput.value);

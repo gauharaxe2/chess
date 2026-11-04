@@ -15,7 +15,7 @@
   <section id="menu" class="screen">
     <div class="menu-inner">
       <p class="brand">CHESS DUEL</p>
-      <p class="tagline">2D chess for two — offline on one device, or online across tabs.</p>
+      <p class="tagline">2D chess for two — first to <strong>2 checkmates</strong> wins the match.</p>
       <button class="btn" id="btn-offline" type="button">Offline Dual Player</button>
       <button class="btn" id="btn-host" type="button">Online — Host Match</button>
       <div class="join-row">
@@ -30,6 +30,7 @@
     <header class="hud">
       <div>
         <p class="turn" id="turn-label">White to move</p>
+        <p class="score" id="score-label">Match 0–0 (first to 2 checkmates)</p>
         <p class="status" id="status-label">Ready</p>
       </div>
       <button class="btn btn-small" id="btn-menu" type="button">Menu</button>
@@ -38,7 +39,7 @@
       <div id="board" class="board" role="grid" aria-label="Chess board"></div>
     </div>
     <footer class="hud-footer">
-      <button class="btn btn-small" id="btn-new" type="button">New Game</button>
+      <button class="btn btn-small" id="btn-new" type="button">Next Game</button>
     </footer>
   </section>
 

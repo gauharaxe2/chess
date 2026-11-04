@@ -7,12 +7,14 @@ namespace ChessMobile.Game
 {
     /// <summary>
     /// Owns the chess rules instance and routes moves for offline / online play.
+    /// Match win condition: first player to deliver 2 checkmates.
     /// </summary>
     public sealed class GameSession : MonoBehaviour
     {
         public static GameSession Instance { get; private set; }
 
         public ChessGame Chess { get; private set; }
+        public MatchScore Match { get; } = new MatchScore();
         public GameMode Mode { get; private set; } = GameMode.OfflineHotseat;
         public PieceColor LocalPlayerColor { get; private set; } = PieceColor.White;
         public bool IsOnline => Mode != GameMode.OfflineHotseat;
@@ -20,7 +22,7 @@ namespace ChessMobile.Game
         {
             get
             {
-                if (Chess == null || Chess.Result != GameResult.None)
+                if (Chess == null || Chess.Result != GameResult.None || Match.IsMatchOver)
                     return false;
                 if (!IsOnline)
                     return true;
@@ -32,6 +34,7 @@ namespace ChessMobile.Game
         public event Action<string> OnStatusMessage;
 
         private INetworkTransport _network;
+        private bool _scoredCurrentGame;
 
         private void Awake()
         {
@@ -45,11 +48,7 @@ namespace ChessMobile.Game
             DontDestroyOnLoad(gameObject);
             Chess = new ChessGame();
             Chess.OnBoardChanged += () => OnStateChanged?.Invoke();
-            Chess.OnGameEnded += (result, reason) =>
-            {
-                OnStatusMessage?.Invoke(DescribeResult(result, reason));
-                OnStateChanged?.Invoke();
-            };
+            Chess.OnGameEnded += HandleGameEnded;
         }
 
         public void StartOfflineHotseat()
@@ -57,16 +56,13 @@ namespace ChessMobile.Game
             Mode = GameMode.OfflineHotseat;
             LocalPlayerColor = PieceColor.White;
             DetachNetwork();
-            Chess.Reset();
-            OnStatusMessage?.Invoke("Offline dual player — White to move");
-            OnStateChanged?.Invoke();
+            BeginNewMatch("Offline dual player — first to 2 checkmates. White to move");
         }
 
         public async void StartOnlineHost()
         {
             Mode = GameMode.OnlineHost;
             LocalPlayerColor = PieceColor.White;
-            Chess.Reset();
 
             _network = NetworkTransportFactory.Create();
             _network.OnRemoteMoveReceived += HandleRemoteMove;
@@ -75,15 +71,13 @@ namespace ChessMobile.Game
 
             OnStatusMessage?.Invoke("Creating online room…");
             string code = await _network.HostAsync();
-            OnStatusMessage?.Invoke($"Room code: {code} — waiting for opponent");
-            OnStateChanged?.Invoke();
+            BeginNewMatch($"Room {code} — first to 2 checkmates. Waiting for opponent");
         }
 
         public async void StartOnlineJoin(string roomCode)
         {
             Mode = GameMode.OnlineJoin;
             LocalPlayerColor = PieceColor.Black;
-            Chess.Reset();
 
             _network = NetworkTransportFactory.Create();
             _network.OnRemoteMoveReceived += HandleRemoteMove;
@@ -92,7 +86,25 @@ namespace ChessMobile.Game
 
             OnStatusMessage?.Invoke("Joining room…");
             bool ok = await _network.JoinAsync(roomCode);
-            OnStatusMessage?.Invoke(ok ? "Joined — waiting for White" : "Failed to join room");
+            if (ok)
+                BeginNewMatch("Joined — first to 2 checkmates. Waiting for White");
+            else
+                OnStatusMessage?.Invoke("Failed to join room");
+            OnStateChanged?.Invoke();
+        }
+
+        /// <summary>Starts the next board after a game ends, keeping match score.</summary>
+        public void StartNextGame()
+        {
+            if (Match.IsMatchOver)
+            {
+                BeginNewMatch("New match — first to 2 checkmates. White to move");
+                return;
+            }
+
+            _scoredCurrentGame = false;
+            Chess.Reset();
+            OnStatusMessage?.Invoke($"{Match.ScoreLine()}. White to move");
             OnStateChanged?.Invoke();
         }
 
@@ -126,9 +138,44 @@ namespace ChessMobile.Game
             return true;
         }
 
+        private void BeginNewMatch(string status)
+        {
+            Match.Reset();
+            _scoredCurrentGame = false;
+            Chess.Reset();
+            OnStatusMessage?.Invoke(status);
+            OnStateChanged?.Invoke();
+        }
+
+        private void HandleGameEnded(GameResult result, DrawReason reason)
+        {
+            if (_scoredCurrentGame)
+                return;
+            _scoredCurrentGame = true;
+
+            bool matchOver = Match.ApplyGameResult(result);
+            string gameLine = DescribeResult(result, reason);
+
+            if (matchOver)
+            {
+                string winner = Match.MatchWinner == GameResult.WhiteWins ? "White" : "Black";
+                OnStatusMessage?.Invoke(
+                    $"{gameLine}. {Match.ScoreLine()}. Match over — {winner} wins!");
+            }
+            else if (result == GameResult.Draw)
+            {
+                OnStatusMessage?.Invoke($"{gameLine}. {Match.ScoreLine()}. Draws don't count — next game.");
+            }
+            else
+            {
+                OnStatusMessage?.Invoke($"{gameLine}. {Match.ScoreLine()}. First to {MatchScore.CheckmatesToWin} wins the match.");
+            }
+
+            OnStateChanged?.Invoke();
+        }
+
         private void HandleRemoteMove(string uci)
         {
-            // Remote moves bypass CanInteract — they are the opponent's turn.
             if (!Chess.TryMakeMoveUci(uci))
             {
                 OnStatusMessage?.Invoke("Received illegal remote move: " + uci);
@@ -141,17 +188,17 @@ namespace ChessMobile.Game
 
         private void UpdateTurnStatus()
         {
-            if (Chess.Result != GameResult.None)
+            if (Chess.Result != GameResult.None || Match.IsMatchOver)
                 return;
 
             if (!IsOnline)
             {
-                OnStatusMessage?.Invoke($"{Chess.Board.SideToMove} to move");
+                OnStatusMessage?.Invoke($"{Match.ScoreLine()} · {Chess.Board.SideToMove} to move");
                 return;
             }
 
             bool myTurn = Chess.Board.SideToMove == LocalPlayerColor;
-            OnStatusMessage?.Invoke(myTurn ? "Your turn" : "Opponent's turn");
+            OnStatusMessage?.Invoke($"{Match.ScoreLine()} · {(myTurn ? "Your turn" : "Opponent's turn")}");
         }
 
         private void DetachNetwork()
@@ -173,8 +220,8 @@ namespace ChessMobile.Game
         {
             return result switch
             {
-                GameResult.WhiteWins => "Checkmate — White wins",
-                GameResult.BlackWins => "Checkmate — Black wins",
+                GameResult.WhiteWins => "Checkmate — White scores",
+                GameResult.BlackWins => "Checkmate — Black scores",
                 GameResult.Draw => reason switch
                 {
                     DrawReason.Stalemate => "Draw — Stalemate",

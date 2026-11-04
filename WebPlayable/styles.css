@@ -135,6 +135,13 @@ html, body {
   font-size: 1.15rem;
 }
 
+.score {
+  margin: 0.15rem 0 0;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .status {
   margin: 0.2rem 0 0;
   color: var(--muted);
