@@ -28,7 +28,7 @@ namespace ChessMobile.UI
             brand.fontStyle = FontStyle.Bold;
 
             _subtitle = UiFactory.CreateText(_root.transform, "Subtitle",
-                "2D chess for two — offline on one device, or online across the world.",
+                "2D chess for two — first to 2 checkmates wins the match.",
                 28, GameTheme.TextMuted);
             UiFactory.Anchor(_subtitle.rectTransform, new Vector2(0.1f, 0.62f), new Vector2(0.9f, 0.72f), Vector2.zero, Vector2.zero);
 
