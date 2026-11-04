@@ -11,6 +11,8 @@ cd WebPlayable && python3 -m http.server 8765
 # then open http://127.0.0.1:8765/
 ```
 
+**Firebase** (`chess-duel-426622`): Auth (guest + email), Firestore profiles/matches, Android `google-services.json`. See [`docs/FIREBASE.md`](docs/FIREBASE.md).
+
 ## Quick start
 
 1. Install **Unity Hub** + **Unity 2022.3 LTS** with the **Android Build Support** module (SDK + NDK + OpenJDK).

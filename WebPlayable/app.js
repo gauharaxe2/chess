@@ -15,6 +15,16 @@ import {
   tryMove,
   tryUci,
 } from "./chess.js";
+import { mountProfileUI } from "./firebase/profiles-ui.js";
+import {
+  firebaseReady,
+  createMatchDoc,
+  joinMatchByRoomCode,
+  listenMatch,
+  pushMatchMove,
+  recordMatchOutcome,
+  auth,
+} from "./firebase/app.js";
 
 const CHECKMATES_TO_WIN = 2;
 
@@ -50,9 +60,37 @@ const state = {
   blackCheckmates: 0,
   matchWinner: null, // "white" | "black" | null
   scoredCurrentGame: false,
+  profile: null,
+  firestoreMatchId: null,
+  unlistenMatch: null,
 };
 
 resetGame(state.game);
+
+mountProfileUI({
+  root: document.getElementById("profile-root"),
+  onProfile: (profile) => {
+    state.profile = profile;
+    menuHint.textContent = profile
+      ? `Signed in as ${profile.displayName}. Offline works anytime; online uses Firebase.`
+      : "Sign in to create a cloud profile for online play.";
+    menuHint.style.color = "";
+  },
+});
+
+function requireProfileForOnline() {
+  if (!firebaseReady()) {
+    menuHint.textContent = "Firebase is not linked yet — online cloud play is unavailable.";
+    menuHint.style.color = "var(--danger)";
+    return false;
+  }
+  if (!auth?.currentUser || !state.profile) {
+    menuHint.textContent = "Create or sign into a profile before hosting/joining online.";
+    menuHint.style.color = "var(--danger)";
+    return false;
+  }
+  return true;
+}
 
 function scoreLine() {
   return `Match ${state.whiteCheckmates}–${state.blackCheckmates} (first to ${CHECKMATES_TO_WIN} checkmates)`;
@@ -148,6 +186,8 @@ function renderBoard() {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "sq " + ((logicalFile + logicalRank) % 2 === 1 ? "light" : "dark");
+      btn.dataset.square = String.fromCharCode(97 + logicalFile) + (logicalRank + 1);
+      btn.setAttribute("aria-label", btn.dataset.square);
       if (state.selected === logical) btn.classList.add("selected");
       if (legalTos.has(logical)) {
         btn.classList.add("legal");
@@ -160,7 +200,10 @@ function renderBoard() {
         span.textContent = pieceGlyph(piece.type, piece.color);
         btn.appendChild(span);
       }
-      btn.addEventListener("click", () => onSquareClick(logical));
+      btn.addEventListener("pointerup", (ev) => {
+        ev.preventDefault();
+        onSquareClick(logical);
+      });
       boardEl.appendChild(btn);
     }
   }
@@ -209,8 +252,28 @@ function clearSelection() {
 
 function afterGameProgress() {
   if (!state.game.result) return;
+  const scoredCheckmate = state.game.result === "white" || state.game.result === "black";
+  const iScored =
+    (state.game.result === "white" && state.localColor === WHITE) ||
+    (state.game.result === "black" && state.localColor === BLACK);
   applyCheckmateScore();
   refreshHud();
+
+  const matchWon =
+    state.matchWinner &&
+    ((state.matchWinner === "white" && state.localColor === WHITE) ||
+      (state.matchWinner === "black" && state.localColor === BLACK));
+  const matchLost = Boolean(state.matchWinner) && !matchWon;
+
+  if (firebaseReady() && auth?.currentUser && state.mode !== "offline") {
+    recordMatchOutcome({
+      scoredCheckmate: scoredCheckmate && iScored,
+      wonMatch: matchWon,
+      lostMatch: matchLost,
+      draw: state.game.result === "draw",
+    }).catch(() => {});
+  }
+
   if (state.matchWinner) {
     setStatus(`${scoreLine()}. Match over — ${state.matchWinner === "white" ? "White" : "Black"} wins!`);
   } else if (state.game.result === "draw") {
@@ -220,15 +283,31 @@ function afterGameProgress() {
   }
 }
 
+async function syncMoveToCloud(uci) {
+  if (!state.firestoreMatchId) return;
+  const finished = Boolean(state.matchWinner);
+  await pushMatchMove(state.firestoreMatchId, {
+    uci,
+    fen: "",
+    moveSeq: state.game.history.length,
+    whiteScore: state.whiteCheckmates,
+    blackScore: state.blackCheckmates,
+    status: finished ? "finished" : "active",
+    winnerUid: null,
+  });
+}
+
 function playLocalMove(move) {
   if (!tryMove(state.game, move)) return;
   clearSelection();
   refreshHud();
+  const uci = moveToUci(move);
   if (state.mode !== "offline" && state.channel) {
-    state.channel.postMessage({ type: "move", uci: moveToUci(move), room: state.roomCode });
+    state.channel.postMessage({ type: "move", uci, room: state.roomCode });
   }
   if (state.game.result) afterGameProgress();
   else updateTurnStatus();
+  if (state.firestoreMatchId) syncMoveToCloud(uci).catch(() => {});
   renderBoard();
 }
 
@@ -293,9 +372,38 @@ function teardownOnline() {
     state.channel.close();
     state.channel = null;
   }
+  if (state.unlistenMatch) {
+    state.unlistenMatch();
+    state.unlistenMatch = null;
+  }
+  state.firestoreMatchId = null;
 }
 
-function startHost() {
+function attachFirestoreListener(matchId) {
+  state.firestoreMatchId = matchId;
+  if (state.unlistenMatch) state.unlistenMatch();
+  let lastSeq = 0;
+  state.unlistenMatch = listenMatch(matchId, (data) => {
+    if (data.status === "active" && data.guestUid && state.mode === "online-host") {
+      setStatus("Opponent joined via Firebase. You are White.");
+    }
+    if (typeof data.moveSeq === "number" && data.moveSeq > lastSeq && data.lastMove) {
+      lastSeq = data.moveSeq;
+      if (!canInteract() && tryUci(state.game, data.lastMove)) {
+        state.whiteCheckmates = data.whiteScore || state.whiteCheckmates;
+        state.blackCheckmates = data.blackScore || state.blackCheckmates;
+        clearSelection();
+        refreshHud();
+        if (state.game.result) afterGameProgress();
+        else updateTurnStatus();
+        renderBoard();
+      }
+    }
+  });
+}
+
+async function startHost() {
+  if (!requireProfileForOnline()) return;
   teardownOnline();
   const code = randomCode();
   state.mode = "online-host";
@@ -306,23 +414,30 @@ function startHost() {
   resetGame(state.game);
   clearSelection();
 
+  // Local tab fallback + Firebase cloud room
   const channel = new BroadcastChannel("chess-duel-" + code);
   state.channel = channel;
   channel.onmessage = (ev) => handleOnlineMessage(ev.data);
-  localStorage.setItem("chess-duel-room-" + code, JSON.stringify({ host: true, t: Date.now() }));
 
-  setStatus(`Room ${code} — first to 2 checkmates. Open another tab and Join`);
-  menuHint.textContent = `Hosting ${code}`;
+  try {
+    const matchId = await createMatchDoc(code);
+    attachFirestoreListener(matchId);
+    setStatus(`Room ${code} (Firebase) — first to 2 checkmates. Waiting for opponent`);
+  } catch (e) {
+    setStatus(`Room ${code} (local tab only) — ${e.message || e}`);
+  }
+  menuHint.textContent = `Hosting ${code} as ${state.profile.displayName}`;
   showGame();
 }
 
-function startJoin(code) {
+async function startJoin(code) {
   code = (code || "").trim();
   if (!/^\d{6}$/.test(code)) {
     menuHint.textContent = "Enter a 6-digit room code from the host.";
     menuHint.style.color = "var(--danger)";
     return;
   }
+  if (!requireProfileForOnline()) return;
   teardownOnline();
   state.mode = "online-join";
   state.localColor = BLACK;
@@ -337,7 +452,13 @@ function startJoin(code) {
   channel.onmessage = (ev) => handleOnlineMessage(ev.data);
   channel.postMessage({ type: "hello", room: code });
 
-  setStatus("Joined — first to 2 checkmates. Waiting for White…");
+  try {
+    const matchId = await joinMatchByRoomCode(code);
+    attachFirestoreListener(matchId);
+    setStatus("Joined Firebase match — you are Black.");
+  } catch (e) {
+    setStatus(`Joined local channel — ${e.message || e}`);
+  }
   showGame();
 }
 
