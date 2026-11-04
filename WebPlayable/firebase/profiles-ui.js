@@ -21,7 +21,7 @@ export function mountProfileUI({ root, onProfile }) {
       <div class="profile-actions">
         <button type="button" class="btn btn-google" id="btn-google">Sign in with Google</button>
         <p class="profile-note">Android APK uses <strong>Google Play Games</strong> sign-in. Web uses Google.</p>
-        <button type="button" class="btn btn-small" id="btn-guest">Continue as Guest</button>
+        <button type="button" class="btn btn--secondary btn--compact" id="btn-guest">Continue as Guest</button>
       </div>
       <div class="auth-form">
         <input id="auth-email" type="email" placeholder="Email" autocomplete="username" />
@@ -29,8 +29,8 @@ export function mountProfileUI({ root, onProfile }) {
         <input id="auth-name" type="text" placeholder="Display name" maxlength="24" />
         <input id="auth-user" type="text" placeholder="Username" maxlength="20" />
         <div class="join-row">
-          <button type="button" class="btn btn-small" id="btn-login">Log in</button>
-          <button type="button" class="btn btn-small" id="btn-register">Create profile</button>
+          <button type="button" class="btn btn--secondary btn--compact" id="btn-login">Log in</button>
+          <button type="button" class="btn btn--primary btn--compact" id="btn-register">Create profile</button>
         </div>
       </div>
       <p class="hint" id="auth-error"></p>
@@ -41,9 +41,9 @@ export function mountProfileUI({ root, onProfile }) {
       <p class="profile-stats" id="profile-stats"></p>
       <div class="join-row">
         <input id="rename-input" type="text" maxlength="24" placeholder="New display name" />
-        <button type="button" class="btn btn-small" id="btn-rename">Save</button>
+        <button type="button" class="btn btn--secondary btn--compact" id="btn-rename">Save</button>
       </div>
-      <button type="button" class="btn btn-small" id="btn-logout">Sign out</button>
+      <button type="button" class="btn btn--ghost btn--compact" id="btn-logout">Sign out</button>
     </div>
   `;
   root.prepend(panel);

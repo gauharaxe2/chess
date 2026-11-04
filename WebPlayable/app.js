@@ -63,6 +63,7 @@ const state = {
   profile: null,
   firestoreMatchId: null,
   unlistenMatch: null,
+  lastMove: null, // { from, to }
 };
 
 resetGame(state.game);
@@ -93,7 +94,7 @@ function requireProfileForOnline() {
 }
 
 function scoreLine() {
-  return `Match ${state.whiteCheckmates}–${state.blackCheckmates} (first to ${CHECKMATES_TO_WIN} checkmates)`;
+  return `Match ${state.whiteCheckmates}–${state.blackCheckmates} · first to ${CHECKMATES_TO_WIN}`;
 }
 
 function resetMatchScores() {
@@ -147,17 +148,17 @@ function refreshHud() {
   scoreLabel.textContent = scoreLine();
 
   if (state.matchWinner) {
-    turnLabel.textContent = `Match over — ${sideName(state.matchWinner === "white" ? WHITE : BLACK)} wins (2 checkmates)`;
-    turnLabel.style.color = "var(--accent)";
+    turnLabel.textContent = `Match over — ${sideName(state.matchWinner === "white" ? WHITE : BLACK)} wins`;
+    turnLabel.style.color = "var(--gold)";
   } else if (g.result === "white") {
     turnLabel.textContent = "Checkmate — White scores";
-    turnLabel.style.color = "var(--accent)";
+    turnLabel.style.color = "var(--gold)";
   } else if (g.result === "black") {
     turnLabel.textContent = "Checkmate — Black scores";
-    turnLabel.style.color = "var(--accent)";
+    turnLabel.style.color = "var(--gold)";
   } else if (g.result === "draw") {
-    turnLabel.textContent = `Draw — ${g.drawReason || "agreement"} (no point)`;
-    turnLabel.style.color = "var(--accent)";
+    turnLabel.textContent = `Draw — ${g.drawReason || "agreement"}`;
+    turnLabel.style.color = "var(--gold)";
   } else if (isInCheck(g)) {
     turnLabel.textContent = `${sideName(g.side)} in check`;
     turnLabel.style.color = "var(--danger)";
@@ -167,10 +168,26 @@ function refreshHud() {
   }
 }
 
+function syncBoardRails() {
+  const files = state.flip ? "hgfedcba" : "abcdefgh";
+  const ranks = state.flip ? "12345678" : "87654321";
+  document.querySelectorAll(".board-rail--files").forEach((rail) => {
+    [...rail.children].forEach((el, i) => {
+      el.textContent = files[i];
+    });
+  });
+  document.querySelectorAll(".board-rail--ranks").forEach((rail) => {
+    [...rail.children].forEach((el, i) => {
+      el.textContent = ranks[i];
+    });
+  });
+}
+
 function renderBoard() {
   const g = state.game;
   const checkSq = isInCheck(g) ? findKing(g.board, g.side) : -1;
   const legalTos = new Set(state.legal.map((m) => m.to));
+  syncBoardRails();
 
   boardEl.innerHTML = "";
   for (let vr = 0; vr < 8; vr++) {
@@ -188,6 +205,9 @@ function renderBoard() {
       btn.className = "sq " + ((logicalFile + logicalRank) % 2 === 1 ? "light" : "dark");
       btn.dataset.square = String.fromCharCode(97 + logicalFile) + (logicalRank + 1);
       btn.setAttribute("aria-label", btn.dataset.square);
+      if (state.lastMove && (logical === state.lastMove.from || logical === state.lastMove.to)) {
+        btn.classList.add("last-move");
+      }
       if (state.selected === logical) btn.classList.add("selected");
       if (legalTos.has(logical)) {
         btn.classList.add("legal");
@@ -299,6 +319,7 @@ async function syncMoveToCloud(uci) {
 
 function playLocalMove(move) {
   if (!tryMove(state.game, move)) return;
+  state.lastMove = { from: move.from, to: move.to };
   clearSelection();
   refreshHud();
   const uci = moveToUci(move);
@@ -327,8 +348,9 @@ function startNextGame() {
     resetMatchScores();
     resetGame(state.game);
     state.scoredCurrentGame = false;
+    state.lastMove = null;
     clearSelection();
-    setStatus("New match — first to 2 checkmates. White to move");
+    setStatus("New match — White to move");
     refreshHud();
     renderBoard();
     return;
@@ -341,8 +363,9 @@ function startNextGame() {
 
   resetGame(state.game);
   state.scoredCurrentGame = false;
+  state.lastMove = null;
   clearSelection();
-  setStatus(`${scoreLine()}. White to move`);
+  setStatus(`${scoreLine()} · White to move`);
   refreshHud();
   renderBoard();
 
@@ -356,10 +379,11 @@ function startOffline() {
   state.mode = "offline";
   state.localColor = WHITE;
   state.flip = false;
+  state.lastMove = null;
   resetMatchScores();
   resetGame(state.game);
   clearSelection();
-  setStatus("Offline dual player — first to 2 checkmates. White to move");
+  setStatus("Offline dual player — White to move");
   showGame();
 }
 
@@ -390,6 +414,9 @@ function attachFirestoreListener(matchId) {
     if (typeof data.moveSeq === "number" && data.moveSeq > lastSeq && data.lastMove) {
       lastSeq = data.moveSeq;
       if (!canInteract() && tryUci(state.game, data.lastMove)) {
+        const hist = state.game.history;
+        const last = hist[hist.length - 1];
+        if (last) state.lastMove = { from: last.from, to: last.to };
         state.whiteCheckmates = data.whiteScore || state.whiteCheckmates;
         state.blackCheckmates = data.blackScore || state.blackCheckmates;
         clearSelection();
@@ -410,6 +437,7 @@ async function startHost() {
   state.localColor = WHITE;
   state.flip = false;
   state.roomCode = code;
+  state.lastMove = null;
   resetMatchScores();
   resetGame(state.game);
   clearSelection();
@@ -443,6 +471,7 @@ async function startJoin(code) {
   state.localColor = BLACK;
   state.flip = true;
   state.roomCode = code;
+  state.lastMove = null;
   resetMatchScores();
   resetGame(state.game);
   clearSelection();
@@ -485,6 +514,9 @@ function handleOnlineMessage(data) {
   if (data.type === "move" && data.uci) {
     if (canInteract()) return;
     if (tryUci(state.game, data.uci)) {
+      const hist = state.game.history;
+      const last = hist[hist.length - 1];
+      if (last) state.lastMove = { from: last.from, to: last.to };
       clearSelection();
       refreshHud();
       if (state.game.result) afterGameProgress();
