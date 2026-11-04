@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RootNamespace>ChessCore.SmokeTest</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/PieceType.cs" Link="Core/PieceType.cs" />
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/Square.cs" Link="Core/Square.cs" />
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/Piece.cs" Link="Core/Piece.cs" />
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/Move.cs" Link="Core/Move.cs" />
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/BoardState.cs" Link="Core/BoardState.cs" />
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/MoveGenerator.cs" Link="Core/MoveGenerator.cs" />
+    <Compile Include="../../ChessMobile/Assets/Scripts/Core/ChessGame.cs" Link="Core/ChessGame.cs" />
+  </ItemGroup>
+</Project>
