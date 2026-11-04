@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Chess Duel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <section id="menu" class="screen">
+    <div class="menu-inner">
+      <p class="brand">CHESS DUEL</p>
+      <p class="tagline">2D chess for two — offline on one device, or online across tabs.</p>
+      <button class="btn" id="btn-offline" type="button">Offline Dual Player</button>
+      <button class="btn" id="btn-host" type="button">Online — Host Match</button>
+      <div class="join-row">
+        <input id="join-code" type="text" maxlength="6" placeholder="Room code" autocomplete="off" />
+        <button class="btn btn-join" id="btn-join" type="button">Join</button>
+      </div>
+      <p class="hint" id="menu-hint">Pick a mode to start.</p>
+    </div>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <header class="hud">
+      <div>
+        <p class="turn" id="turn-label">White to move</p>
+        <p class="status" id="status-label">Ready</p>
+      </div>
+      <button class="btn btn-small" id="btn-menu" type="button">Menu</button>
+    </header>
+    <div class="board-wrap">
+      <div id="board" class="board" role="grid" aria-label="Chess board"></div>
+    </div>
+    <footer class="hud-footer">
+      <button class="btn btn-small" id="btn-new" type="button">New Game</button>
+    </footer>
+  </section>
+
+  <div id="promo-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <p>Promote pawn</p>
+      <div class="promo-choices">
+        <button type="button" data-promo="q">♕</button>
+        <button type="button" data-promo="r">♖</button>
+        <button type="button" data-promo="b">♗</button>
+        <button type="button" data-promo="n">♘</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
