@@ -4,6 +4,13 @@
 
 Open the Unity project in [`ChessMobile/`](ChessMobile/).
 
+**Browser preview (no Unity required):** serve [`WebPlayable/`](WebPlayable/) and open it locally:
+
+```bash
+cd WebPlayable && python3 -m http.server 8765
+# then open http://127.0.0.1:8765/
+```
+
 ## Quick start
 
 1. Install **Unity Hub** + **Unity 2022.3 LTS** with the **Android Build Support** module (SDK + NDK + OpenJDK).
@@ -15,8 +22,8 @@ Open the Unity project in [`ChessMobile/`](ChessMobile/).
 
 | Mode | How it works |
 |------|----------------|
-| **Offline Dual Player** | Hotseat on one phone — players take turns. |
-| **Online — Host** | Creates a lobby and shows a room code. You play White. |
+| **Offline Dual Player** | Hotseat on one phone — first to **2 checkmates** wins the match. |
+| **Online — Host** | Creates a lobby and shows a room code. You play White. First to 2 checkmates. |
 | **Online — Join** | Enter the room code. You play Black. |
 
 ### Online backend
