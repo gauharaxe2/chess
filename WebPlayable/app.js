@@ -73,7 +73,7 @@ mountProfileUI({
   onProfile: (profile) => {
     state.profile = profile;
     menuHint.textContent = profile
-      ? `Signed in as ${profile.displayName}. Offline works anytime; online uses Firebase.`
+      ? `Signed in as ${profile.displayName || profile.username || "Player"}. Offline anytime · online via Firebase.`
       : "Sign in to create a cloud profile for online play.";
     menuHint.style.color = "";
   },

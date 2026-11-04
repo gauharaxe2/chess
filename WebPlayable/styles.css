@@ -144,8 +144,14 @@ button, input { font: inherit; }
   gap: 0.7rem;
 }
 
+.menu-actions > .btn {
+  width: 100%;
+}
+
 .btn {
   appearance: none;
+  display: inline-block;
+  width: auto;
   border: 0;
   border-radius: 14px;
   padding: 1rem 1.15rem;
