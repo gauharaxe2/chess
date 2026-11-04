@@ -45,6 +45,12 @@ namespace ChessMobile.Game
                 fbGo.AddComponent<FirebaseProfileService>();
             }
 
+            if (GooglePlayGamesAuth.Instance == null)
+            {
+                var gpgGo = new GameObject("GooglePlayGamesAuth");
+                gpgGo.AddComponent<GooglePlayGamesAuth>();
+            }
+
             var canvas = UiFactory.CreateCanvas("AppCanvas");
             DontDestroyOnLoad(canvas.gameObject);
 

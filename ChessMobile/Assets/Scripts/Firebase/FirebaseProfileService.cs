@@ -68,6 +68,23 @@ namespace ChessMobile.Firebase
             return Current != null;
         }
 
+        /// <summary>
+        /// Applies a session from Google / Play Games IdP exchange and ensures a Firestore profile.
+        /// </summary>
+        public async Task ApplyExternalSessionAsync(string idToken, string uid, string displayName, string provider)
+        {
+            IdToken = idToken;
+            LocalUid = uid;
+            string trimmed = string.IsNullOrWhiteSpace(displayName) ? "Player" : displayName.Trim();
+            string name = trimmed.Length <= 24 ? trimmed : trimmed.Substring(0, 24);
+            string prefix = provider == "playgames" ? "gpg_" : "g_";
+            string username = (prefix + uid.Substring(0, Math.Min(8, uid.Length))).ToLowerInvariant();
+            Current = await UpsertProfileAsync(name, username, "");
+            if (Current != null)
+                Current.provider = provider;
+            OnProfileChanged?.Invoke(Current);
+        }
+
         public async Task<PlayerProfile> UpsertProfileAsync(string displayName, string username, string email)
         {
             if (string.IsNullOrEmpty(IdToken) || string.IsNullOrEmpty(LocalUid))

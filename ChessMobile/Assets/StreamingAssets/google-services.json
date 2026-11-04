@@ -12,7 +12,12 @@
           "package_name": "com.chessduel.game"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "412170643988-ss8bg9d85rh2emm6rk3vlc1rlrrjm44r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCP0AA6GGrsESYlQeh461-A0oTAkpGzLr0"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "412170643988-ss8bg9d85rh2emm6rk3vlc1rlrrjm44r.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

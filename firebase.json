@@ -6,7 +6,15 @@
   "auth": {
     "providers": {
       "anonymous": true,
-      "emailPassword": true
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Chess Duel",
+        "supportEmail": "gauhar426622@gmail.com",
+        "authorizedRedirectUris": [
+          "https://chess-duel-426622.firebaseapp.com/__/auth/handler",
+          "https://chess-duel-426622.web.app/__/auth/handler"
+        ]
+      }
     }
   }
 }

@@ -5,6 +5,8 @@ import {
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   updateProfile,
   signOut,
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -81,6 +83,22 @@ export async function loginEmail(email, password) {
   await ensureProfile(cred.user, {
     displayName: cred.user.displayName || email.split("@")[0],
     username: normalizeUsername(cred.user.displayName || `player_${cred.user.uid.slice(0, 6)}`),
+  });
+  return cred.user;
+}
+
+/** Google Sign-In (web). On Android/Play Store builds use Google Play Games instead. */
+export async function signInWithGoogle() {
+  initFirebase();
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  provider.addScope("profile");
+  provider.addScope("email");
+  const cred = await signInWithPopup(auth, provider);
+  const name = cred.user.displayName || cred.user.email?.split("@")[0] || "Google Player";
+  await ensureProfile(cred.user, {
+    displayName: name,
+    username: normalizeUsername(`g_${cred.user.uid.slice(0, 8)}`),
   });
   return cred.user;
 }

@@ -146,7 +146,30 @@ html, body {
   font-size: 0.92rem;
 }
 
-.profile-actions { margin-bottom: 0.75rem; }
+.profile-actions { margin-bottom: 0.75rem; display: grid; gap: 0.45rem; }
+
+.btn-google {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: #1a73e8;
+  color: #fff;
+  font: 600 1.02rem "Source Sans 3", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(26, 115, 232, 0.28);
+}
+
+.btn-google:hover { background: #1765cc; }
+
+.profile-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
 
 .auth-form {
   display: grid;

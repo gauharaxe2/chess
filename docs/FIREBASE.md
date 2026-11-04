@@ -11,7 +11,7 @@
 | Web app `Chess Duel Web` | Created |
 | Android app `com.chessduel.game` | Created |
 | Firestore `(default)` in `asia-south1` (STANDARD) | Created |
-| Auth: Anonymous + Email/Password | Enabled |
+| Auth: Anonymous + Email/Password + Google + Play Games | Enabled |
 | Security rules + indexes | Deployed |
 
 ## Collections (profiles + matches)
@@ -29,7 +29,9 @@ cd WebPlayable && python3 -m http.server 8765
 # open http://127.0.0.1:8765/
 ```
 
-Create a profile (guest or email), then Host/Join online.
+Create a profile (**Sign in with Google**, guest, or email), then Host/Join online.
+
+Android / Play Store builds use **Google Play Games** — see [`GOOGLE_PLAY_GAMES.md`](GOOGLE_PLAY_GAMES.md).
 
 ## Unity / Android
 
