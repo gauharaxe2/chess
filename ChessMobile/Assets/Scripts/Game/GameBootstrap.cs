@@ -1,3 +1,4 @@
+using ChessMobile.Firebase;
 using ChessMobile.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -36,6 +37,12 @@ namespace ChessMobile.Game
             {
                 var sessionGo = new GameObject("GameSession");
                 sessionGo.AddComponent<GameSession>();
+            }
+
+            if (FirebaseProfileService.Instance == null)
+            {
+                var fbGo = new GameObject("FirebaseProfileService");
+                fbGo.AddComponent<FirebaseProfileService>();
             }
 
             var canvas = UiFactory.CreateCanvas("AppCanvas");

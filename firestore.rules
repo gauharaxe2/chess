@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: profiles/{uid}
+    //   uid: string (must equal auth.uid)
+    //   displayName: string (2-24 chars)
+    //   username: string (3-20, lowercase alphanumeric + _)
+    //   email: string
+    //   photoURL: string (optional)
+    //   createdAt: timestamp
+    //   updatedAt: timestamp
+    //   stats: {
+    //     checkmatesScored: int >= 0
+    //     matchesWon: int >= 0
+    //     matchesLost: int >= 0
+    //     gamesPlayed: int >= 0
+    //     draws: int >= 0
+    //   }
+    //
+    // Collection: usernames/{usernameLower}
+    //   uid: string
+    //   displayName: string
+    //
+    // Collection: matches/{matchId}
+    //   hostUid, guestUid: string
+    //   roomCode: string
+    //   status: "waiting" | "active" | "finished"
+    //   whiteScore, blackScore: int
+    //   checkmatesToWin: int (== 2)
+    //   lastMove: string
+    //   moveSeq: int
+    //   fen: string
+    //   createdAt, updatedAt: timestamp
+    //   winnerUid: string | null
+    // ===============================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isValidStats(stats) {
+      return stats is map
+        && stats.keys().hasOnly([
+          'checkmatesScored', 'matchesWon', 'matchesLost', 'gamesPlayed', 'draws'
+        ])
+        && stats.checkmatesScored is int && stats.checkmatesScored >= 0
+        && stats.matchesWon is int && stats.matchesWon >= 0
+        && stats.matchesLost is int && stats.matchesLost >= 0
+        && stats.gamesPlayed is int && stats.gamesPlayed >= 0
+        && stats.draws is int && stats.draws >= 0;
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasOnly([
+          'uid', 'displayName', 'username', 'email', 'photoURL',
+          'createdAt', 'updatedAt', 'stats'
+        ])
+        && data.uid is string && data.uid == request.auth.uid
+        && data.displayName is string
+        && data.displayName.size() >= 2
+        && data.displayName.size() <= 24
+        && data.username is string
+        && data.username.size() >= 3
+        && data.username.size() <= 20
+        && data.username.matches('^[a-z0-9_]+$')
+        && data.email is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && isValidStats(data.stats)
+        && (!('photoURL' in data) || data.photoURL is string);
+    }
+
+    function profileUnchangedIdentity() {
+      return request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.username == resource.data.username;
+    }
+
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create: if isSelf(uid) && isValidProfile(request.resource.data);
+      allow update: if isSelf(uid)
+        && isValidProfile(request.resource.data)
+        && profileUnchangedIdentity();
+      allow delete: if false;
+    }
+
+    match /usernames/{username} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'displayName'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.displayName is string;
+      allow update, delete: if false;
+    }
+
+    function isMatchPlayer() {
+      return signedIn() && (
+        resource.data.hostUid == request.auth.uid ||
+        resource.data.guestUid == request.auth.uid
+      );
+    }
+
+    function isValidMatch(data) {
+      return data.keys().hasAll([
+          'hostUid', 'guestUid', 'roomCode', 'status',
+          'whiteScore', 'blackScore', 'checkmatesToWin',
+          'lastMove', 'moveSeq', 'fen', 'createdAt', 'updatedAt', 'winnerUid'
+        ])
+        && data.hostUid is string
+        && data.guestUid is string
+        && data.roomCode is string
+        && data.status in ['waiting', 'active', 'finished']
+        && data.whiteScore is int && data.whiteScore >= 0
+        && data.blackScore is int && data.blackScore >= 0
+        && data.checkmatesToWin == 2
+        && data.lastMove is string
+        && data.moveSeq is int && data.moveSeq >= 0
+        && data.fen is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /matches/{matchId} {
+      allow read: if signedIn() && (
+        resource.data.hostUid == request.auth.uid ||
+        resource.data.guestUid == request.auth.uid ||
+        resource.data.status == 'waiting'
+      );
+      allow create: if signedIn()
+        && isValidMatch(request.resource.data)
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.whiteScore == 0
+        && request.resource.data.blackScore == 0
+        && request.resource.data.moveSeq == 0;
+      allow update: if isMatchPlayer() && isValidMatch(request.resource.data)
+        && request.resource.data.hostUid == resource.data.hostUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.checkmatesToWin == resource.data.checkmatesToWin;
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+    }
+  }
+}

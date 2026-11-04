@@ -121,6 +121,51 @@ html, body {
   min-height: 1.4em;
 }
 
+.profile-panel {
+  margin: 0 0 1.25rem;
+}
+
+.profile-card {
+  padding: 1rem 1.05rem;
+  border-radius: 12px;
+  background: rgba(16, 32, 26, 0.88);
+  border: 1px solid rgba(184, 219, 115, 0.18);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.profile-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.profile-sub, .profile-stats {
+  margin: 0.35rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.profile-actions { margin-bottom: 0.75rem; }
+
+.auth-form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.auth-form input,
+.profile-card input {
+  width: 100%;
+  border: 1px solid rgba(184, 219, 115, 0.25);
+  border-radius: 10px;
+  background: rgba(20, 36, 31, 0.85);
+  color: var(--text);
+  padding: 0.7rem 0.85rem;
+  font-size: 0.98rem;
+}
+
+#btn-logout { margin-top: 0.65rem; }
+
 .hud, .hud-footer {
   display: flex;
   align-items: center;
