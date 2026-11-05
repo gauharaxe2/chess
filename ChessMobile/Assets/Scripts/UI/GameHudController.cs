@@ -12,6 +12,7 @@ namespace ChessMobile.UI
         private Text _status;
         private Text _turn;
         private Text _score;
+        private Text _nextGameLabel;
         private ChessBoardView _boardView;
 
         public void Build(Transform canvas)
@@ -72,6 +73,7 @@ namespace ChessMobile.UI
             });
             UiFactory.Anchor(resetBtn.GetComponent<RectTransform>(),
                 new Vector2(0.20f, 0.03f), new Vector2(0.80f, 0.10f), Vector2.zero, Vector2.zero);
+            _nextGameLabel = resetBtn.GetComponentInChildren<Text>();
 
             if (GameSession.Instance != null)
             {
@@ -79,6 +81,11 @@ namespace ChessMobile.UI
                 GameSession.Instance.OnStatusMessage += msg =>
                 {
                     if (_status != null) _status.text = msg;
+                };
+                GameSession.Instance.OnMatchFinished += () =>
+                {
+                    Hide();
+                    FindFirstObjectByType<MainMenuController>()?.Show();
                 };
             }
         }
@@ -126,6 +133,9 @@ namespace ChessMobile.UI
                 _turn.text = $"{session.Chess.Board.SideToMove} to move";
                 _turn.color = GameTheme.TextPrimary;
             }
+
+            if (_nextGameLabel != null)
+                _nextGameLabel.text = session.Match.IsMatchOver ? "Finish match" : "Next Game";
 
             _boardView?.Refresh();
         }

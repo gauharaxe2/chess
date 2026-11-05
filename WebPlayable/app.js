@@ -175,6 +175,7 @@ function setStatus(msg) {
 function refreshHud() {
   const g = state.game;
   scoreLabel.textContent = scoreLine();
+  syncNextGameButton();
 
   if (state.matchWinner) {
     turnLabel.textContent = `Match over — ${sideName(state.matchWinner === "white" ? WHITE : BLACK)} wins`;
@@ -372,16 +373,24 @@ function updateTurnStatus() {
   );
 }
 
-function startNextGame() {
+function syncNextGameButton() {
+  const btn = document.getElementById("btn-new");
+  if (!btn) return;
   if (state.matchWinner) {
-    resetMatchScores();
-    resetGame(state.game);
-    state.scoredCurrentGame = false;
-    state.lastMove = null;
-    clearSelection();
-    setStatus("New match — White to move");
-    refreshHud();
-    renderBoard();
+    btn.textContent = "Finish match";
+    btn.title = "Return to menu — match complete";
+  } else {
+    btn.textContent = "Next Game";
+    btn.title = "Start the next board (keeps match score)";
+  }
+}
+
+function startNextGame() {
+  // First to 2 checkmates ends the match — go back to the menu instead of
+  // silently starting another match.
+  if (state.matchWinner) {
+    setStatus(`${scoreLine()}. Match over — ${state.matchWinner === "white" ? "White" : "Black"} wins!`);
+    showMenu();
     return;
   }
 
@@ -396,6 +405,7 @@ function startNextGame() {
   clearSelection();
   setStatus(`${scoreLine()} · White to move`);
   refreshHud();
+  syncNextGameButton();
   renderBoard();
 
   if (state.mode !== "offline" && state.channel) {

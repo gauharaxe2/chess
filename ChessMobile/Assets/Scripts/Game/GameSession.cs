@@ -32,6 +32,8 @@ namespace ChessMobile.Game
 
         public event Action OnStateChanged;
         public event Action<string> OnStatusMessage;
+        /// <summary>Fired when the match is finished (first to 2 checkmates) and should return to menu.</summary>
+        public event Action OnMatchFinished;
 
         private INetworkTransport _network;
         private bool _scoredCurrentGame;
@@ -93,12 +95,16 @@ namespace ChessMobile.Game
             OnStateChanged?.Invoke();
         }
 
-        /// <summary>Starts the next board after a game ends, keeping match score.</summary>
+        /// <summary>Starts the next board after a game ends, keeping match score.
+        /// When the match is already won (first to 2 checkmates), returns to menu instead.</summary>
         public void StartNextGame()
         {
             if (Match.IsMatchOver)
             {
-                BeginNewMatch("New match — first to 2 checkmates. White to move");
+                // Match is finished — do not auto-start another match.
+                string winner = Match.MatchWinner == GameResult.WhiteWins ? "White" : "Black";
+                OnStatusMessage?.Invoke($"{Match.ScoreLine()}. Match over — {winner} wins!");
+                OnMatchFinished?.Invoke();
                 return;
             }
 

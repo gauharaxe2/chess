@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useMemo, useReducer } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -10,7 +10,6 @@ import {
   View,
 } from "react-native";
 import {
-  BLACK,
   BISHOP,
   createGame,
   isInCheck,
@@ -35,8 +34,162 @@ const MUTED = "#9aa6bf";
 
 type Screen = "menu" | "game";
 type Move = { from: number; to: number; promo?: number };
+type Game = ReturnType<typeof createGame>;
 
-function findKing(board: Array<{ type: number; color: number } | null>, color: number) {
+type State = {
+  screen: Screen;
+  game: Game;
+  selected: number | null;
+  legal: Move[];
+  lastMove: { from: number; to: number } | null;
+  whiteScore: number;
+  blackScore: number;
+  matchWinner: "white" | "black" | null;
+  scoredCurrent: boolean;
+  pendingPromo: { from: number; to: number; options: Move[] } | null;
+  status: string;
+};
+
+type Action =
+  | { type: "START_MATCH" }
+  | { type: "BACK_MENU" }
+  | { type: "NEXT_GAME" }
+  | { type: "SELECT"; square: number; legal: Move[] }
+  | { type: "CLEAR_SELECT" }
+  | { type: "PROMO_OPEN"; from: number; to: number; options: Move[] }
+  | { type: "PROMO_CLOSE" }
+  | { type: "AFTER_MOVE"; game: Game; from: number; to: number };
+
+function freshGame(): Game {
+  const g = createGame();
+  resetGame(g);
+  return cloneGame(g);
+}
+
+function cloneGame(g: Game): Game {
+  return {
+    ...g,
+    board: g.board.map((p) => (p ? { ...p } : null)),
+    castling: { ...g.castling },
+    history: [...g.history],
+    positionKeys: [...(g.positionKeys || [])],
+  };
+}
+
+function scoreLine(w: number, b: number) {
+  return `Match ${w}–${b} · first to ${CHECKMATES_TO_WIN}`;
+}
+
+function initialState(): State {
+  return {
+    screen: "menu",
+    game: freshGame(),
+    selected: null,
+    legal: [],
+    lastMove: null,
+    whiteScore: 0,
+    blackScore: 0,
+    matchWinner: null,
+    scoredCurrent: false,
+    pendingPromo: null,
+    status: "Ready",
+  };
+}
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "START_MATCH":
+      return {
+        ...initialState(),
+        screen: "game",
+        status: `${scoreLine(0, 0)} · White to move`,
+      };
+    case "BACK_MENU":
+      return { ...initialState(), screen: "menu" };
+    case "NEXT_GAME": {
+      if (state.matchWinner) {
+        return { ...initialState(), screen: "menu" };
+      }
+      if (!state.game.result) {
+        return { ...state, status: "Finish the current game first." };
+      }
+      return {
+        ...state,
+        game: freshGame(),
+        selected: null,
+        legal: [],
+        lastMove: null,
+        scoredCurrent: false,
+        pendingPromo: null,
+        status: `${scoreLine(state.whiteScore, state.blackScore)} · White to move`,
+      };
+    }
+    case "SELECT":
+      return { ...state, selected: action.square, legal: action.legal };
+    case "CLEAR_SELECT":
+      return { ...state, selected: null, legal: [] };
+    case "PROMO_OPEN":
+      return {
+        ...state,
+        pendingPromo: {
+          from: action.from,
+          to: action.to,
+          options: action.options,
+        },
+      };
+    case "PROMO_CLOSE":
+      return { ...state, pendingPromo: null };
+    case "AFTER_MOVE": {
+      const game = action.game;
+      let whiteScore = state.whiteScore;
+      let blackScore = state.blackScore;
+      let matchWinner = state.matchWinner;
+      let scoredCurrent = state.scoredCurrent;
+      let status = `${scoreLine(whiteScore, blackScore)} · ${sideName(game.side)} to move`;
+
+      if (game.result && !scoredCurrent && !matchWinner) {
+        scoredCurrent = true;
+        if (game.result === "white") whiteScore += 1;
+        if (game.result === "black") blackScore += 1;
+
+        if (whiteScore >= CHECKMATES_TO_WIN) matchWinner = "white";
+        if (blackScore >= CHECKMATES_TO_WIN) matchWinner = "black";
+
+        if (matchWinner) {
+          status = `${scoreLine(whiteScore, blackScore)}. Match over — ${
+            matchWinner === "white" ? "White" : "Black"
+          } wins!`;
+        } else if (game.result === "draw") {
+          status = `${scoreLine(whiteScore, blackScore)}. Draws don't count — tap Next Game.`;
+        } else {
+          status = `${scoreLine(whiteScore, blackScore)}. First to ${CHECKMATES_TO_WIN} checkmates. Tap Next Game.`;
+        }
+      } else if (game.result && matchWinner) {
+        status = `${scoreLine(whiteScore, blackScore)}. Match over — ${
+          matchWinner === "white" ? "White" : "Black"
+        } wins!`;
+      }
+
+      return {
+        ...state,
+        game,
+        selected: null,
+        legal: [],
+        lastMove: { from: action.from, to: action.to },
+        pendingPromo: null,
+        whiteScore,
+        blackScore,
+        matchWinner,
+        scoredCurrent,
+        status,
+      };
+    }
+    default:
+      return state;
+  }
+}
+
+function findKing(board: Game["board"], color: number) {
   for (let i = 0; i < 64; i++) {
     const p = board[i];
     if (p && p.type === 6 && p.color === color) return i;
@@ -48,34 +201,12 @@ export default function App() {
   const { width } = useWindowDimensions();
   const boardSize = Math.min(width - 24, 420);
   const squareSize = boardSize / 8;
+  const [state, dispatch] = useReducer(reducer, undefined, initialState);
 
-  const [screen, setScreen] = useState<Screen>("menu");
-  const [game, setGame] = useState(() => createGame());
-  const [selected, setSelected] = useState<number | null>(null);
-  const [legal, setLegal] = useState<Move[]>([]);
-  const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
-  const [whiteScore, setWhiteScore] = useState(0);
-  const [blackScore, setBlackScore] = useState(0);
-  const [matchWinner, setMatchWinner] = useState<"white" | "black" | null>(null);
-  const [scoredCurrent, setScoredCurrent] = useState(false);
-  const [pendingPromo, setPendingPromo] = useState<{
-    from: number;
-    to: number;
-    options: Move[];
-  } | null>(null);
-  const [status, setStatus] = useState("Ready");
-
-  const legalTos = useMemo(() => new Set(legal.map((m) => m.to)), [legal]);
-
-  function bump(nextGame: ReturnType<typeof createGame>) {
-    setGame({ ...nextGame, board: [...nextGame.board], history: [...nextGame.history] });
-  }
-
-  function scoreLine(w = whiteScore, b = blackScore) {
-    return `Match ${w}–${b} · first to ${CHECKMATES_TO_WIN}`;
-  }
+  const legalTos = useMemo(() => new Set(state.legal.map((m) => m.to)), [state.legal]);
 
   function turnText() {
+    const { matchWinner, game } = state;
     if (matchWinner) return `Match over — ${matchWinner === "white" ? "White" : "Black"} wins`;
     if (game.result === "white") return "Checkmate — White scores";
     if (game.result === "black") return "Checkmate — Black scores";
@@ -84,115 +215,70 @@ export default function App() {
     return `${sideName(game.side)} to move`;
   }
 
-  function startOffline() {
-    const g = createGame();
-    setGame(g);
-    setSelected(null);
-    setLegal([]);
-    setLastMove(null);
-    setWhiteScore(0);
-    setBlackScore(0);
-    setMatchWinner(null);
-    setScoredCurrent(false);
-    setPendingPromo(null);
-    setStatus(`${scoreLine(0, 0)} · White to move`);
-    setScreen("game");
-  }
-
-  function nextGame() {
-    if (matchWinner) {
-      setScreen("menu");
-      return;
-    }
-    const g = createGame();
-    resetGame(g);
-    setGame(g);
-    setSelected(null);
-    setLegal([]);
-    setLastMove(null);
-    setScoredCurrent(false);
-    setPendingPromo(null);
-    setStatus(`${scoreLine()} · White to move`);
-  }
-
-  function applyCheckmateScore(result: string | null) {
-    if (scoredCurrent || matchWinner) return;
-    setScoredCurrent(true);
-    if (!result || result === "draw") return;
-    let w = whiteScore;
-    let b = blackScore;
-    if (result === "white") w += 1;
-    if (result === "black") b += 1;
-    setWhiteScore(w);
-    setBlackScore(b);
-    if (w >= CHECKMATES_TO_WIN) setMatchWinner("white");
-    if (b >= CHECKMATES_TO_WIN) setMatchWinner("black");
-    if (w >= CHECKMATES_TO_WIN || b >= CHECKMATES_TO_WIN) {
-      setStatus(`${scoreLine(w, b)}. Match over — ${w >= CHECKMATES_TO_WIN ? "White" : "Black"} wins!`);
-    } else if (result === "draw") {
-      setStatus(`${scoreLine(w, b)}. Draws don't count — tap Next Game.`);
-    } else {
-      setStatus(`${scoreLine(w, b)}. First to ${CHECKMATES_TO_WIN} checkmates. Tap Next Game.`);
-    }
-  }
-
   function playMove(move: Move) {
-    if (matchWinner || game.result) return;
-    if (!tryMove(game, move)) return;
-    setLastMove({ from: move.from, to: move.to });
-    setSelected(null);
-    setLegal([]);
-    bump(game);
-    if (game.result) applyCheckmateScore(game.result);
-    else setStatus(`${scoreLine()} · ${sideName(game.side)} to move`);
+    if (state.matchWinner || state.game.result) return;
+    const draft = cloneGame(state.game);
+    if (!tryMove(draft, move)) return;
+    dispatch({ type: "AFTER_MOVE", game: draft, from: move.from, to: move.to });
   }
 
   function onSquarePress(logical: number) {
-    if (matchWinner || game.result || pendingPromo) return;
+    if (state.matchWinner || state.game.result || state.pendingPromo) return;
 
-    if (selected != null) {
-      const options = legal.filter((m) => m.to === logical);
+    if (state.selected != null) {
+      const options = state.legal.filter((m) => m.to === logical);
       if (options.length) {
         const promos = options.filter((m) => m.promo);
         if (promos.length) {
-          setPendingPromo({ from: selected, to: logical, options: promos });
+          dispatch({
+            type: "PROMO_OPEN",
+            from: state.selected,
+            to: logical,
+            options: promos,
+          });
           return;
         }
         playMove(options[0]);
         return;
       }
-      const p = game.board[logical];
-      if (p && p.color === game.side) {
-        setSelected(logical);
-        setLegal(legalFrom(game, logical));
+      const p = state.game.board[logical];
+      if (p && p.color === state.game.side) {
+        dispatch({
+          type: "SELECT",
+          square: logical,
+          legal: legalFrom(state.game, logical),
+        });
         return;
       }
-      setSelected(null);
-      setLegal([]);
+      dispatch({ type: "CLEAR_SELECT" });
       return;
     }
 
-    const p = game.board[logical];
-    if (p && p.color === game.side) {
-      setSelected(logical);
-      setLegal(legalFrom(game, logical));
+    const p = state.game.board[logical];
+    if (p && p.color === state.game.side) {
+      dispatch({
+        type: "SELECT",
+        square: logical,
+        legal: legalFrom(state.game, logical),
+      });
     }
   }
 
   function squares() {
     const nodes = [];
-    const checkSq = isInCheck(game) ? findKing(game.board, game.side) : -1;
+    const checkSq = isInCheck(state.game) ? findKing(state.game.board, state.game.side) : -1;
     for (let vr = 0; vr < 8; vr++) {
       for (let vf = 0; vf < 8; vf++) {
         const logicalFile = vf;
         const logicalRank = 7 - vr;
         const logical = logicalRank * 8 + logicalFile;
-        const piece = game.board[logical];
+        const piece = state.game.board[logical];
         const light = (logicalFile + logicalRank) % 2 === 1;
-        const isSelected = selected === logical;
+        const isSelected = state.selected === logical;
         const isLegal = legalTos.has(logical);
         const isLast =
-          lastMove && (logical === lastMove.from || logical === lastMove.to);
+          state.lastMove &&
+          (logical === state.lastMove.from || logical === state.lastMove.to);
         const inCheck = logical === checkSq;
 
         nodes.push(
@@ -204,9 +290,14 @@ export default function App() {
               {
                 width: squareSize,
                 height: squareSize,
-                backgroundColor: light ? LIGHT : DARK,
+                backgroundColor: isLast
+                  ? light
+                    ? "#e8c478"
+                    : "#c9a15b"
+                  : light
+                    ? LIGHT
+                    : DARK,
               },
-              isLast ? { backgroundColor: light ? "#e8c478" : "#c9a15b" } : null,
               isSelected ? styles.selected : null,
               inCheck ? styles.check : null,
             ]}
@@ -233,7 +324,7 @@ export default function App() {
     return nodes;
   }
 
-  if (screen === "menu") {
+  if (state.screen === "menu") {
     return (
       <SafeAreaView style={styles.root}>
         <StatusBar style="light" />
@@ -243,12 +334,12 @@ export default function App() {
             Two players. One board. First to{" "}
             <Text style={styles.em}>two checkmates</Text> takes the match.
           </Text>
-          <Pressable style={styles.btnPrimary} onPress={startOffline}>
+          <Pressable style={styles.btnPrimary} onPress={() => dispatch({ type: "START_MATCH" })}>
             <Text style={styles.btnLabel}>Offline Dual Player</Text>
             <Text style={styles.btnMeta}>Pass & play · Expo Go</Text>
           </Pressable>
           <Text style={styles.hint}>
-            Open this project in Expo Go, then tap Offline Dual Player.
+            Score a checkmate to earn a point. First to 2 wins the match.
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -262,13 +353,13 @@ export default function App() {
         <View style={{ flex: 1 }}>
           <Text style={styles.hudBrand}>CHESS BOARD</Text>
           <Text style={styles.turn}>{turnText()}</Text>
-          <Text style={styles.score}>{scoreLine()}</Text>
+          <Text style={styles.score}>{scoreLine(state.whiteScore, state.blackScore)}</Text>
         </View>
         <View style={styles.hudActions}>
           <Text style={styles.status} numberOfLines={3}>
-            {status}
+            {state.status}
           </Text>
-          <Pressable style={styles.ghostBtn} onPress={() => setScreen("menu")}>
+          <Pressable style={styles.ghostBtn} onPress={() => dispatch({ type: "BACK_MENU" })}>
             <Text style={styles.ghostText}>Menu</Text>
           </Pressable>
         </View>
@@ -279,14 +370,35 @@ export default function App() {
       </View>
 
       <View style={styles.footer}>
-        {(game.result || matchWinner) && (
-          <Pressable style={styles.btnPrimary} onPress={nextGame}>
-            <Text style={styles.btnLabel}>{matchWinner ? "Back to Menu" : "Next Game"}</Text>
+        {(state.game.result || state.matchWinner) && (
+          <Pressable style={styles.btnPrimary} onPress={() => dispatch({ type: "NEXT_GAME" })}>
+            <Text style={styles.btnLabel}>
+              {state.matchWinner ? "Finish match" : "Next Game"}
+            </Text>
+            <Text style={styles.btnMeta}>
+              {state.matchWinner
+                ? "Return to menu — match complete"
+                : `Score ${state.whiteScore}–${state.blackScore} · play another board`}
+            </Text>
           </Pressable>
         )}
       </View>
 
-      {pendingPromo ? (
+      {state.matchWinner ? (
+        <View style={styles.modal}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {state.matchWinner === "white" ? "White" : "Black"} wins the match
+            </Text>
+            <Text style={styles.modalSub}>{scoreLine(state.whiteScore, state.blackScore)}</Text>
+            <Pressable style={styles.btnPrimary} onPress={() => dispatch({ type: "BACK_MENU" })}>
+              <Text style={styles.btnLabel}>Back to menu</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {state.pendingPromo ? (
         <View style={styles.modal}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Promote to</Text>
@@ -296,12 +408,12 @@ export default function App() {
                   key={t}
                   style={styles.promoBtn}
                   onPress={() => {
-                    const move = pendingPromo.options.find((m) => m.promo === t);
-                    setPendingPromo(null);
+                    const move = state.pendingPromo?.options.find((m) => m.promo === t);
+                    dispatch({ type: "PROMO_CLOSE" });
                     if (move) playMove(move);
                   }}
                 >
-                  <Text style={styles.promoGlyph}>{pieceGlyph(t, game.side)}</Text>
+                  <Text style={styles.promoGlyph}>{pieceGlyph(t, state.game.side)}</Text>
                 </Pressable>
               ))}
             </View>
@@ -394,14 +506,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(8,14,12,0.72)",
     alignItems: "center",
     justifyContent: "center",
+    padding: 24,
   },
   modalCard: {
     backgroundColor: "#121a2b",
     borderRadius: 14,
     padding: 20,
     alignItems: "center",
+    gap: 12,
+    width: "100%",
+    maxWidth: 340,
   },
-  modalTitle: { color: CREAM, fontWeight: "700", fontSize: 16, marginBottom: 12 },
+  modalTitle: { color: CREAM, fontWeight: "800", fontSize: 20, textAlign: "center" },
+  modalSub: { color: MUTED, fontSize: 14, marginBottom: 4 },
   promoRow: { flexDirection: "row", gap: 10 },
   promoBtn: {
     width: 56,
