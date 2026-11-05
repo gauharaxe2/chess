@@ -1,4 +1,4 @@
-# Chess Duel
+# Chess Board
 
 **C# 2D chess for Android (Google Play)** — offline dual-player on one device, and online multiplayer via Unity Gaming Services Lobby.
 
@@ -18,7 +18,7 @@ cd WebPlayable && python3 -m http.server 8765
 1. Install **Unity Hub** + **Unity 2022.3 LTS** with the **Android Build Support** module (SDK + NDK + OpenJDK).
 2. Hub → **Add** → select the `ChessMobile` folder.
 3. Open the project, press **Play**. The UI boots automatically (no scene wiring needed).
-4. Menu → **Chess Duel → Run Engine Self-Test** to verify rules.
+4. Menu → **Chess Board → Run Engine Self-Test** to verify rules.
 
 ## Game modes
 

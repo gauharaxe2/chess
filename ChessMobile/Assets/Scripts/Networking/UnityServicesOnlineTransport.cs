@@ -64,7 +64,7 @@ namespace ChessMobile.Networking
                 }
             };
 
-            _lobby = await LobbyService.Instance.CreateLobbyAsync("ChessDuel", 2, options);
+            _lobby = await LobbyService.Instance.CreateLobbyAsync("ChessBoard", 2, options);
             _cts = new CancellationTokenSource();
             _ = PollLoopAsync(_cts.Token);
             return _lobby.LobbyCode;
