@@ -33,6 +33,20 @@ cd WebPlayable && python3 -m http.server 8765
 - **Production (Play Store):** Unity Authentication + Lobby (turn-based move sync). Link a Unity Project under *Edit → Project Settings → Services*.
 - **Fallback without Services:** same-WiFi `LocalLanTransport` on device builds; editor mock for UI checks.
 
+## Play Store build (Android wrapper)
+
+Prebuilt release packages live under [`android-playstore/`](android-playstore/) (WebPlayable inside a signed WebView app — usable without Unity Editor).
+
+```bash
+cd android-playstore && ./scripts/make-release.sh
+# → dist/ChessBoard-1.0.0.aab  (upload to Play Console)
+# → dist/ChessBoard-1.0.0.apk
+```
+
+Package ID: `com.chessduel.game`. Prefer uploading the **.aab**. Back up `upload-keystore.jks`.
+
+Native Unity IL2CPP builds still need Unity 2022.3 LTS + Android modules locally (checklist below).
+
 ## Play Store publish checklist
 
 1. *Edit → Project Settings → Player → Android*

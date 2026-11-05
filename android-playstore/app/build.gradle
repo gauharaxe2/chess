@@ -1,0 +1,81 @@
+plugins {
+    id "com.android.application"
+}
+
+tasks.register("syncWebPlayable", Copy) {
+    from(rootProject.file("../WebPlayable"))
+    into(layout.projectDirectory.dir("src/main/assets/www"))
+    include("**/*")
+}
+
+tasks.named("preBuild").configure { dependsOn("syncWebPlayable") }
+
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace "com.chessduel.game"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.chessduel.game"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+        resValue "string", "app_name", "Chess Board"
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+                storeFile rootProject.file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packaging {
+        resources {
+            excludes += ["/META-INF/{AL2.0,LGPL2.1}"]
+        }
+    }
+}
+
+dependencies {
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.webkit:webkit:1.11.0"
+    // Align Kotlin stdlib to avoid jdk7/jdk8 duplicate-class clashes.
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
+}
+
+configurations.all {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:1.9.24"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24"
+    }
+}
