@@ -1,4 +1,4 @@
-# Firebase setup — Chess Duel
+# Firebase setup — Chess Board
 
 **Project:** `chess-duel-426622`  
 **Console:** https://console.firebase.google.com/project/chess-duel-426622/overview
@@ -8,7 +8,7 @@
 | Resource | Status |
 |----------|--------|
 | Firebase project | Created |
-| Web app `Chess Duel Web` | Created |
+| Web app `Chess Board Web` | Created |
 | Android app `com.chessduel.game` | Created |
 | Firestore `(default)` in `asia-south1` (STANDARD) | Created |
 | Auth: Anonymous + Email/Password + Google + Play Games | Enabled |

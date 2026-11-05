@@ -113,17 +113,70 @@ button, input { font: inherit; }
 
 .menu-hero { text-align: left; }
 
+.brand-lockup {
+  display: grid;
+  grid-template-columns: 1fr minmax(7.5rem, 38%);
+  align-items: end;
+  gap: 0.85rem 1.1rem;
+}
+
 .brand {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(3.2rem, 13vw, 4.8rem);
   letter-spacing: -0.03em;
-  line-height: 0.92;
+  line-height: 0.88;
   color: var(--gold);
   text-shadow: 0 0 48px rgba(232, 196, 120, 0.22);
   animation: brandIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+.hero-board {
+  position: relative;
+  justify-self: end;
+  width: 100%;
+  max-width: 11.5rem;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(232, 196, 120, 0.28);
+  animation: boardIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  transform-origin: 80% 80%;
+}
+
+.hero-board__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.hero-board__sq {
+  display: grid;
+  place-items: center;
+  font-size: clamp(0.55rem, 2.4vw, 0.85rem);
+  line-height: 1;
+  user-select: none;
+}
+
+.hero-board__sq--light { background: var(--light-sq); color: #1a1410; }
+.hero-board__sq--dark { background: var(--dark-sq); color: #1a1410; }
+
+.hero-board__piece {
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.hero-board__piece--w {
+  color: #f7f4ea;
+  filter: drop-shadow(0 1px 0 #222) drop-shadow(0 0 1px #111);
+}
+
+.hero-board__piece--b { color: #1c1714; }
 
 .tagline {
   margin: 0.85rem 0 0;
@@ -646,7 +699,19 @@ button, input { font: inherit; }
   .menu-profile { grid-area: profile; }
   .menu-actions { grid-area: actions; max-width: 420px; }
 
+  .brand-lockup {
+    grid-template-columns: 1fr minmax(11rem, 42%);
+    gap: 1rem 1.5rem;
+  }
+
   .brand { font-size: clamp(4.5rem, 7vw, 6.2rem); }
+
+  .hero-board {
+    max-width: 15rem;
+    border-radius: 16px;
+  }
+
+  .hero-board__sq { font-size: 1.05rem; }
 
   .board-frame { width: min(70vw, 72dvh, 680px); }
 

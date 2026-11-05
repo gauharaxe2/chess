@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: ChessDuel
-  productName: Chess Duel
+  productName: Chess Board
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.08, g: 0.14, b: 0.12, a: 1}
@@ -573,7 +573,7 @@ PlayerSettings:
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: Chess Duel
+  metroApplicationDescription: Chess Board
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -638,7 +638,7 @@ PlayerSettings:
   cloudProjectId: 
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Chess Duel
+  projectName: Chess Board
   organizationId: 
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

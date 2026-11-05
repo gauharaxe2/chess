@@ -7,7 +7,7 @@ namespace ChessMobile.EditorTools
 {
     public static class ChessEngineTestMenu
     {
-        [MenuItem("Chess Duel/Run Engine Self-Test")]
+        [MenuItem("Chess Board/Run Engine Self-Test")]
         public static void Run()
         {
             var result = ChessEngineSelfTest.RunAll();

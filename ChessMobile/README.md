@@ -1,4 +1,4 @@
-# Chess Duel (Unity)
+# Chess Board (Unity)
 
 Unity **2022.3 LTS** project for a 2D mobile chess game.
 

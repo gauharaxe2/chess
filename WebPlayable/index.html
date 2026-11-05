@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1220" />
-  <title>Chess Duel</title>
+  <title>Chess Board</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
@@ -20,7 +20,12 @@
   <section id="menu" class="screen screen--menu">
     <div class="menu-shell">
       <header class="menu-hero">
-        <p class="brand" aria-label="Chess Duel">CHESS DUEL</p>
+        <div class="brand-lockup">
+          <p class="brand" aria-label="Chess Board">CHESS<br />BOARD</p>
+          <div class="hero-board" aria-hidden="true">
+            <div class="hero-board__grid" id="hero-board-grid"></div>
+          </div>
+        </div>
         <p class="tagline">Two players. One board. First to <em>two checkmates</em> takes the match.</p>
       </header>
 
@@ -48,7 +53,7 @@
   <section id="game" class="screen screen--game hidden">
     <header class="hud">
       <div class="hud__identity">
-        <p class="hud__brand">CHESS DUEL</p>
+        <p class="hud__brand">CHESS BOARD</p>
         <p class="turn" id="turn-label">White to move</p>
         <p class="score" id="score-label">Match 0–0 · first to 2</p>
       </div>

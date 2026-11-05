@@ -24,7 +24,7 @@ namespace ChessMobile.UI
             var wash = UiFactory.CreatePanel(_root.transform, "Wash", new Color(0.15f, 0.28f, 0.20f, 0.45f));
             UiFactory.Anchor(wash.rectTransform, new Vector2(0, 0.45f), Vector2.one, Vector2.zero, Vector2.zero);
 
-            var brand = UiFactory.CreateText(_root.transform, "Brand", "CHESS DUEL", 78, GameTheme.Accent);
+            var brand = UiFactory.CreateText(_root.transform, "Brand", "CHESS BOARD", 78, GameTheme.Accent);
             UiFactory.Anchor(brand.rectTransform, new Vector2(0.08f, 0.74f), new Vector2(0.92f, 0.90f), Vector2.zero, Vector2.zero);
             brand.fontStyle = FontStyle.Bold;
             brand.alignment = TextAnchor.MiddleLeft;
