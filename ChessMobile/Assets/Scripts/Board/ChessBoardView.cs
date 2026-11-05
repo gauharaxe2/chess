@@ -12,11 +12,11 @@ namespace ChessMobile.Board
     public sealed class ChessBoardView : MonoBehaviour
     {
         [SerializeField] private RectTransform boardRoot;
-        [SerializeField] private Color lightSquare = new Color(0.93f, 0.85f, 0.70f);
-        [SerializeField] private Color darkSquare = new Color(0.55f, 0.38f, 0.24f);
-        [SerializeField] private Color selectedColor = new Color(0.95f, 0.80f, 0.25f, 0.85f);
-        [SerializeField] private Color legalColor = new Color(0.35f, 0.75f, 0.40f, 0.70f);
-        [SerializeField] private Color checkColor = new Color(0.90f, 0.25f, 0.25f, 0.75f);
+        [SerializeField] private Color lightSquare = new Color(0.941f, 0.851f, 0.710f);
+        [SerializeField] private Color darkSquare = new Color(0.710f, 0.533f, 0.388f);
+        [SerializeField] private Color selectedColor = new Color(0.941f, 0.757f, 0.290f, 0.85f);
+        [SerializeField] private Color legalColor = new Color(0.290f, 0.824f, 0.584f, 0.70f);
+        [SerializeField] private Color checkColor = new Color(1f, 0.353f, 0.353f, 0.75f);
         [SerializeField] private Font pieceFont;
 
         private readonly SquareView[] _squares = new SquareView[64];

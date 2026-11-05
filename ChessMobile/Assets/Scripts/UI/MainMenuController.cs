@@ -24,14 +24,16 @@ namespace ChessMobile.UI
             var wash = UiFactory.CreatePanel(_root.transform, "Wash", new Color(0.15f, 0.28f, 0.20f, 0.45f));
             UiFactory.Anchor(wash.rectTransform, new Vector2(0, 0.45f), Vector2.one, Vector2.zero, Vector2.zero);
 
-            var brand = UiFactory.CreateText(_root.transform, "Brand", "CHESS DUEL", 72, GameTheme.Accent);
+            var brand = UiFactory.CreateText(_root.transform, "Brand", "CHESS DUEL", 78, GameTheme.Accent);
             UiFactory.Anchor(brand.rectTransform, new Vector2(0.08f, 0.74f), new Vector2(0.92f, 0.90f), Vector2.zero, Vector2.zero);
             brand.fontStyle = FontStyle.Bold;
+            brand.alignment = TextAnchor.MiddleLeft;
 
             _subtitle = UiFactory.CreateText(_root.transform, "Subtitle",
-                "2D chess for two — first to 2 checkmates wins the match.",
-                28, GameTheme.TextMuted);
+                "Two players. One board. First to two checkmates takes the match.",
+                26, GameTheme.TextMuted);
             UiFactory.Anchor(_subtitle.rectTransform, new Vector2(0.1f, 0.66f), new Vector2(0.9f, 0.74f), Vector2.zero, Vector2.zero);
+            _subtitle.alignment = TextAnchor.MiddleLeft;
 
             float y = 0.58f;
             CreateMenuButton(_root.transform, "PlayGamesBtn", "Sign in with Google Play Games", new Color(0.25f, 0.42f, 0.28f), () =>
