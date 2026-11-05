@@ -3,3 +3,10 @@
 **/bin/
 **/obj/
 
+
+# Expo
+ChessBoardExpo/node_modules/
+ChessBoardExpo/.expo/
+ChessBoardExpo/dist/
+*.rar
+

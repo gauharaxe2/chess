@@ -4,6 +4,8 @@
 
 Open the Unity project in [`ChessMobile/`](ChessMobile/).
 
+**Expo Go:** [`ChessBoardExpo/`](ChessBoardExpo/) — `cd ChessBoardExpo && npx expo start`, then scan the QR code in Expo Go.
+
 **Browser preview (no Unity required):** serve [`WebPlayable/`](WebPlayable/) and open it locally:
 
 ```bash
