@@ -68,6 +68,35 @@ const state = {
 
 resetGame(state.game);
 
+function paintHeroBoard() {
+  const grid = document.getElementById("hero-board-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  const board = state.game.board;
+  for (let vr = 0; vr < 8; vr++) {
+    for (let vf = 0; vf < 8; vf++) {
+      const logicalFile = vf;
+      const logicalRank = 7 - vr;
+      const logical = logicalRank * 8 + logicalFile;
+      const piece = board[logical];
+      const sq = document.createElement("div");
+      sq.className =
+        "hero-board__sq hero-board__sq--" +
+        ((logicalFile + logicalRank) % 2 === 1 ? "light" : "dark");
+      if (piece) {
+        const span = document.createElement("span");
+        span.className =
+          "hero-board__piece hero-board__piece--" + (piece.color === WHITE ? "w" : "b");
+        span.textContent = pieceGlyph(piece.type, piece.color);
+        sq.appendChild(span);
+      }
+      grid.appendChild(sq);
+    }
+  }
+}
+
+paintHeroBoard();
+
 mountProfileUI({
   root: document.getElementById("profile-root"),
   onProfile: (profile) => {
